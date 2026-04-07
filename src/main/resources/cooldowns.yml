@@ -1,0 +1,5 @@
+commands:
+  pay: 3000
+  tpa: 3000
+  spawn: 3000
+  rtp: 5000
