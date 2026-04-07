@@ -27,11 +27,23 @@ public final class EconomyService {
     return this.economy != null;
   }
 
+  public boolean isReady() {
+    return economy != null;
+  }
+
+  public boolean trySetupIfNeeded() {
+    return isReady() || setup();
+  }
+
   public double balance(OfflinePlayer player) {
     return economy.getBalance(player);
   }
 
   public EconomyResponse pay(OfflinePlayer from, OfflinePlayer to, double amount) {
+    if (!isReady()) {
+      return error("Ekonomi servisi hazır değil");
+    }
+
     EconomyResponse withdraw = economy.withdrawPlayer(from, amount);
     if (!withdraw.transactionSuccess()) {
       return withdraw;
@@ -54,12 +66,15 @@ public final class EconomyService {
   }
 
   public List<OfflinePlayer> topBalances(int limit) {
-    return Bukkit.getOfflinePlayers()
-      .length == 0 ? List.of() :
+    return Bukkit.getOfflinePlayers().length == 0 ? List.of() :
       List.of(Bukkit.getOfflinePlayers()).stream()
-      .filter(player -> player.getName() != null)
-      .sorted(Comparator.comparingDouble(this::balance).reversed())
-      .limit(limit)
-      .collect(Collectors.toList());
+        .filter(player -> player.getName() != null)
+        .sorted(Comparator.comparingDouble(this::balance).reversed())
+        .limit(limit)
+        .collect(Collectors.toList());
+  }
+
+  private EconomyResponse error(String msg) {
+    return new EconomyResponse(0, 0, EconomyResponse.ResponseType.FAILURE, msg);
   }
 }

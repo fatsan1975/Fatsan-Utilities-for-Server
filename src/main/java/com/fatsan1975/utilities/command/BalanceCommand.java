@@ -35,6 +35,10 @@ public final class BalanceCommand implements CommandExecutor {
     if (sender instanceof Player player && !CommandGate.checkRateLimit(player, configuration, rateLimit, "balance", "rate-limit.commands.balance")) {
       return true;
     }
+    if (!economyService.trySetupIfNeeded()) {
+      sender.sendMessage(configuration.message("economy.not-ready"));
+      return true;
+    }
 
     if (args.length == 0) {
       if (!(sender instanceof Player player)) {

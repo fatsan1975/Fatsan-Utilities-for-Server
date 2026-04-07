@@ -99,3 +99,7 @@ Aşağıdaki tüm komutlar permission kontrollüdür. LuckPerms ile doğrudan ve
 - JUnit 5 test altyapısı eklendi (`MessageFormatter`, `RateLimitService`, `PayLimitService` testleri).
 - CI workflow eklendi (`.github/workflows/ci.yml`) ve build+test gate tanımlandı.
 - `RELEASE.md` ile release öncesi smoke/checklist dokümante edildi.
+
+## Ekonomi Hook Notu
+- Plugin açılışında ekonomi provider geç register olursa plugin kapanmaz; servis geldiğinde otomatik hook olur.
+- Bu süreçte ekonomi komutları geçici olarak `Ekonomi servisi henüz hazır değil` mesajı döner.

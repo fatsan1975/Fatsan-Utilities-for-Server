@@ -20,6 +20,7 @@ economy:
   daily-limit-exceeded: "&cGünlük para gönderme limitine ulaştın."
   pay-sent: "&a{player} adlı oyuncuya &f{amount} &agönderdin."
   pay-received: "&a{player} sana &f{amount} &agönderdi."
+  not-ready: "&cEkonomi servisi henüz hazır değil. Lütfen biraz sonra tekrar dene."
 
 teleport:
   tpa-request-sent: "&a{player} oyuncusuna TPA isteği gönderdin."

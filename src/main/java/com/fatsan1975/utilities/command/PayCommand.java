@@ -54,6 +54,10 @@ public final class PayCommand implements CommandExecutor {
     if (!CommandGate.checkRateLimit(player, configuration, rateLimit, "pay", "rate-limit.commands.pay")) {
       return true;
     }
+    if (!economyService.trySetupIfNeeded()) {
+      sender.sendMessage(configuration.message("economy.not-ready"));
+      return true;
+    }
     if (args.length < 2) {
       sender.sendMessage(configuration.message("general.invalid-usage").replace("{usage}", "/pay <oyuncu> <miktar>"));
       return true;

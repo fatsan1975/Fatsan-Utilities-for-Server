@@ -18,6 +18,7 @@ import com.fatsan1975.utilities.core.ModuleManager;
 import com.fatsan1975.utilities.core.PluginConfigValidator;
 import com.fatsan1975.utilities.core.RateLimitService;
 import com.fatsan1975.utilities.economy.BalanceTopCacheService;
+import com.fatsan1975.utilities.economy.EconomyHookListener;
 import com.fatsan1975.utilities.economy.EconomyService;
 import com.fatsan1975.utilities.economy.PayLimitService;
 import com.fatsan1975.utilities.logging.AuditLogger;
@@ -52,9 +53,7 @@ public final class FatsanUtilitiesPlugin extends JavaPlugin {
 
     this.economyService = new EconomyService(this);
     if (!this.economyService.setup()) {
-      getLogger().severe("Vault ekonomisi bulunamadı. Plugin kapatılıyor.");
-      getServer().getPluginManager().disablePlugin(this);
-      return;
+      getLogger().warning("Vault ekonomi servisi henüz bulunamadı. Plugin açık kalacak ve servis geldiğinde otomatik bağlanacak.");
     }
 
     this.cooldownService = new CooldownService();
@@ -65,6 +64,7 @@ public final class FatsanUtilitiesPlugin extends JavaPlugin {
     this.auditLogger = new AuditLogger(this);
 
     getServer().getPluginManager().registerEvents(new InvSeeListener(), this);
+    getServer().getPluginManager().registerEvents(new EconomyHookListener(this, economyService), this);
     registerCommands();
     getLogger().info("FatsanUtilities etkinleştirildi.");
   }
