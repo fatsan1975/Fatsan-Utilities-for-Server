@@ -1,0 +1,9 @@
+pay:
+  min-amount: 1.0
+  max-amount: 1000000.0
+  daily-limit: 5000000.0
+
+balancetop:
+  max-entries: 50
+  page-size: 10
+  cache-ttl-millis: 30000

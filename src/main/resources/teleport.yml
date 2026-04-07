@@ -1,0 +1,61 @@
+tpa:
+  request-expire-millis: 30000
+  overwrite-request: true
+  teleport-delay-ticks: 0
+  cancel-on-move: true
+
+spawn:
+  delay-ticks: 0
+  cancel-on-move: false
+
+rtp:
+  delay-ticks: 0
+  cancel-on-move: false
+  # /rtp yazınca varsayılan olarak kullanılacak dünya (yoksa oyuncunun bulunduğu dünya kullanılır)
+  default-world: world
+
+  # RTP cooldown (ms). Eğer burası yoksa cooldowns.yml -> commands.rtp değeri kullanılır.
+  cooldown-millis: 5000
+
+  default:
+    min-coordinate: -1500
+    max-coordinate: 1500
+    max-attempts: 30
+    denied-biomes:
+      - OCEAN
+      - DEEP_OCEAN
+      - COLD_OCEAN
+      - DEEP_COLD_OCEAN
+      - LUKEWARM_OCEAN
+      - DEEP_LUKEWARM_OCEAN
+      - WARM_OCEAN
+      - DEEP_FROZEN_OCEAN
+      - FROZEN_OCEAN
+    denied-ground-materials:
+      - WATER
+      - LAVA
+      - MAGMA_BLOCK
+      - CAMPFIRE
+      - SOUL_CAMPFIRE
+
+  # Dünya bazlı RTP ayarları (her dünya için ayrı koordinat/attempt/safe liste)
+  worlds:
+    world:
+      enabled: true
+      min-coordinate: -2000
+      max-coordinate: 2000
+      max-attempts: 35
+
+    world_nether:
+      enabled: true
+      min-coordinate: -1000
+      max-coordinate: 1000
+      max-attempts: 40
+      denied-ground-materials:
+        - LAVA
+        - MAGMA_BLOCK
+        - FIRE
+        - SOUL_FIRE
+
+    world_the_end:
+      enabled: false
