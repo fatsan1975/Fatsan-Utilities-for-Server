@@ -43,6 +43,7 @@ bukkitPluginYaml {
   load = BukkitPluginYaml.PluginLoadOrder.POSTWORLD
   authors.add("Fatsan1975")
   apiVersion = "1.21"
+  foliaSupported = true
   depend = listOf("Vault")
 
   commands {
