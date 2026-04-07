@@ -1,0 +1,27 @@
+plugin:
+  language: tr_TR
+  debug: false
+
+modules:
+  economy: true
+  teleport: true
+  social: true
+  admin: true
+
+rate-limit:
+  commands:
+    balance: 250
+    balancetop: 500
+    pay: 250
+    tpa: 300
+    tpaccept: 300
+    tpdeny: 300
+    rtp: 500
+    spawn: 300
+    itemchat: 500
+    invchat: 500
+    invsee: 250
+    futilitiesreload: 1000
+    fuhelp: 500
+    fudebug: 1000
+    fumodule: 500
