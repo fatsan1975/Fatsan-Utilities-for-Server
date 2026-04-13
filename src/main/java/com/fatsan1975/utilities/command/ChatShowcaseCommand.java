@@ -6,6 +6,7 @@ import com.fatsan1975.utilities.core.RateLimitService;
 import com.fatsan1975.utilities.util.CommandGate;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -16,6 +17,8 @@ import org.bukkit.inventory.ItemStack;
 
 public final class ChatShowcaseCommand implements CommandExecutor {
   public enum Mode { ITEM, INVENTORY }
+
+  private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacyAmpersand();
 
   private final PluginConfiguration configuration;
   private final Mode mode;
@@ -36,7 +39,7 @@ public final class ChatShowcaseCommand implements CommandExecutor {
       return true;
     }
     if (!(sender instanceof Player player)) {
-      sender.sendMessage(configuration.message("general.player-only"));
+      sender.sendMessage(configuration.locale().message("general.player-only", sender));
       return true;
     }
     String key = command.getName().toLowerCase();
@@ -48,7 +51,6 @@ public final class ChatShowcaseCommand implements CommandExecutor {
       showItem(player);
       return true;
     }
-
     showInventory(player);
     return true;
   }
@@ -56,14 +58,13 @@ public final class ChatShowcaseCommand implements CommandExecutor {
   private void showItem(Player player) {
     ItemStack item = player.getInventory().getItemInMainHand();
     if (item.getType() == Material.AIR) {
-      player.sendMessage(configuration.message("chat.item-empty"));
+      player.sendMessage(configuration.locale().message("chat.item-empty", player));
       return;
     }
-
-    Component message = Component.text(configuration.message("chat.item-prefix").replace("{player}", player.getName()) + " ")
+    String prefix = configuration.locale().message("chat.item-prefix", player).replace("{player}", player.getName()) + " ";
+    Component message = LEGACY.deserialize(prefix)
       .append(item.displayName())
       .hoverEvent(item.asHoverEvent());
-
     Bukkit.getServer().broadcast(message);
   }
 
@@ -75,10 +76,9 @@ public final class ChatShowcaseCommand implements CommandExecutor {
       }
       details.append(content.getAmount()).append("x ").append(content.getType()).append("\n");
     }
-
-    Component message = Component.text(configuration.message("chat.inventory-prefix").replace("{player}", player.getName()))
-      .hoverEvent(HoverEvent.showText(Component.text(details.isEmpty() ? "Boş envanter" : details.toString())));
-
+    String prefix = configuration.locale().message("chat.inventory-prefix", player).replace("{player}", player.getName());
+    Component message = LEGACY.deserialize(prefix)
+      .hoverEvent(HoverEvent.showText(Component.text(details.isEmpty() ? "-" : details.toString())));
     Bukkit.getServer().broadcast(message);
   }
 }

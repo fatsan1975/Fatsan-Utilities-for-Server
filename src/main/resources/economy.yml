@@ -1,3 +1,22 @@
+# =============================================================================
+# Fatsan Utilities — Ekonomi Ayarları / Economy Configuration
+# =============================================================================
+
+# Çalışma modu / Operation mode
+#   auto     -> Mevcut Vault provider varsa CONSUMER, yoksa kendi PROVIDER (önerilen)
+#   provider -> Her zaman kendi SQLite ekonomimizi register et
+#   consumer -> Sadece harici provider'ı kullan (CMI/EssentialsX vb.)
+mode: auto
+
+# Yeni hesap başlangıç bakiyesi / Starting balance for new accounts
+starting-balance: 100.0
+
+currency:
+  symbol: "$"
+  name-singular: "credit"
+  name-plural: "credits"
+  fractional-digits: 2
+
 pay:
   min-amount: 1.0
   max-amount: 1000000.0

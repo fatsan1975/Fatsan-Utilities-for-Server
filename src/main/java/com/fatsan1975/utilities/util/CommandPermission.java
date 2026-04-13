@@ -9,7 +9,7 @@ public final class CommandPermission {
 
   public static boolean check(CommandSender sender, Command command, PluginConfiguration configuration) {
     String permission = command.getPermission();
-    if (permission == null || permission.isBlank() || sender.hasPermission(permission)) {
+    if (PermissionAccess.has(sender, permission)) {
       return true;
     }
     sender.sendMessage(configuration.message("general.no-permission"));

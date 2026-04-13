@@ -3,6 +3,7 @@ package com.fatsan1975.utilities.command;
 import com.fatsan1975.utilities.config.PluginConfiguration;
 import com.fatsan1975.utilities.core.RateLimitService;
 import com.fatsan1975.utilities.util.CommandGate;
+import com.fatsan1975.utilities.util.PermissionAccess;
 import java.util.ArrayList;
 import java.util.List;
 import org.bukkit.command.Command;
@@ -24,32 +25,34 @@ public final class HelpCommand implements CommandExecutor {
     if (!CommandGate.checkPermission(sender, command, configuration)) {
       return true;
     }
-    if (sender instanceof Player player && !CommandGate.checkRateLimit(player, configuration, rateLimit, "fuhelp", "rate-limit.commands.fuhelp")) {
+    if (sender instanceof Player player
+      && !CommandGate.checkRateLimit(player, configuration, rateLimit, "fuhelp", "rate-limit.commands.fuhelp")) {
       return true;
     }
 
     List<String> lines = new ArrayList<>();
-    lines.add("§6§lFatsanUtilities Yardım");
-    add(lines, sender, "fatsanutilities.balance", "/balance [oyuncu] - Bakiye görüntüle");
-    add(lines, sender, "fatsanutilities.balancetop", "/balancetop [sayfa] - Zenginlik sıralaması");
-    add(lines, sender, "fatsanutilities.pay", "/pay <oyuncu> <miktar> - Para gönder");
-    add(lines, sender, "fatsanutilities.tpa", "/tpa <oyuncu> - TPA isteği");
-    add(lines, sender, "fatsanutilities.rtp", "/rtp [dünya] - Rastgele güvenli ışınlan");
-    add(lines, sender, "fatsanutilities.spawn", "/spawn - Spawn'a dön");
-    add(lines, sender, "fatsanutilities.itemchat", "/itemchat - Eşya göster");
-    add(lines, sender, "fatsanutilities.invchat", "/invchat - Envanter özeti göster");
-    add(lines, sender, "fatsanutilities.admin.invsee", "/invsee <oyuncu> [ender] - Envanter izle");
-    add(lines, sender, "fatsanutilities.admin.debug", "/fudebug - Debug bilgileri");
-    add(lines, sender, "fatsanutilities.admin.module", "/fumodule <modül> <on|off|status> - Modül yönet");
-    add(lines, sender, "fatsanutilities.admin.reload", "/futilitiesreload - Plugin yenile");
+    lines.add(configuration.locale().message("help.header", sender));
+    add(lines, sender, "fatsanutilities.balance", "help.line-balance");
+    add(lines, sender, "fatsanutilities.balancetop", "help.line-balancetop");
+    add(lines, sender, "fatsanutilities.pay", "help.line-pay");
+    add(lines, sender, "fatsanutilities.tpa", "help.line-tpa");
+    add(lines, sender, "fatsanutilities.rtp", "help.line-rtp");
+    add(lines, sender, "fatsanutilities.spawn", "help.line-spawn");
+    add(lines, sender, "fatsanutilities.itemchat", "help.line-itemchat");
+    add(lines, sender, "fatsanutilities.invchat", "help.line-invchat");
+    add(lines, sender, "fatsanutilities.admin.invsee", "help.line-invsee");
+    add(lines, sender, "fatsanutilities.admin.debug", "help.line-debug");
+    add(lines, sender, "fatsanutilities.admin.module", "help.line-module");
+    add(lines, sender, "fatsanutilities.admin.reload", "help.line-reload");
+    add(lines, sender, "fatsanutilities.admin.eco", "help.line-eco");
 
     lines.forEach(sender::sendMessage);
     return true;
   }
 
-  private void add(List<String> lines, CommandSender sender, String permission, String line) {
-    if (sender.hasPermission(permission)) {
-      lines.add("§e" + line);
+  private void add(List<String> lines, CommandSender sender, String permission, String messageKey) {
+    if (PermissionAccess.has(sender, permission)) {
+      lines.add("§e" + configuration.locale().message(messageKey, sender));
     }
   }
 }

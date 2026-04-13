@@ -42,7 +42,7 @@ public final class ReloadCommand implements CommandExecutor {
     configuration.reloadAll();
     validator.validateAndLog();
     auditLogger.log("RELOAD", sender.getName() + " reloaded plugin configuration");
-    sender.sendMessage(configuration.message("general.reload-success"));
+    sender.sendMessage(configuration.locale().message("general.reload-success", sender));
     return true;
   }
 }

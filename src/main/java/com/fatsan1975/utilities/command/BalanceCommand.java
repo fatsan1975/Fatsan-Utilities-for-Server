@@ -5,14 +5,20 @@ import com.fatsan1975.utilities.core.ModuleManager;
 import com.fatsan1975.utilities.core.RateLimitService;
 import com.fatsan1975.utilities.economy.EconomyService;
 import com.fatsan1975.utilities.util.CommandGate;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
-public final class BalanceCommand implements CommandExecutor {
+public final class BalanceCommand implements CommandExecutor, TabCompleter {
   private final EconomyService economyService;
   private final PluginConfiguration configuration;
   private final ModuleManager modules;
@@ -36,31 +42,46 @@ public final class BalanceCommand implements CommandExecutor {
       return true;
     }
     if (!economyService.trySetupIfNeeded()) {
-      sender.sendMessage(configuration.message("economy.not-ready"));
+      sender.sendMessage(configuration.locale().message("economy.not-ready", sender));
       return true;
     }
 
     if (args.length == 0) {
       if (!(sender instanceof Player player)) {
-        sender.sendMessage(configuration.message("general.player-only"));
+        sender.sendMessage(configuration.locale().message("general.player-only", sender));
         return true;
       }
-      String msg = configuration.message("economy.balance-self")
-        .replace("{amount}", economyService.format(economyService.balance(player)));
-      sender.sendMessage(msg);
+      if (economyService.mode() == EconomyService.Mode.PROVIDER) {
+        economyService.own().ensureAccount(player);
+      }
+      BigDecimal bal = economyService.balance(player);
+      sender.sendMessage(configuration.locale().message("economy.balance-self", sender)
+        .replace("{amount}", economyService.format(bal)));
       return true;
     }
 
-    OfflinePlayer target = Bukkit.getOfflinePlayerIfCached(args[0]);
-    if (target == null || target.getName() == null) {
-      sender.sendMessage(configuration.message("general.player-not-found"));
+    Optional<UUID> resolved = economyService.resolveUuid(args[0]);
+    if (resolved.isEmpty()) {
+      sender.sendMessage(configuration.locale().message("general.player-not-found", sender));
       return true;
     }
-
-    String msg = configuration.message("economy.balance-other")
-      .replace("{player}", target.getName())
-      .replace("{amount}", economyService.format(economyService.balance(target)));
-    sender.sendMessage(msg);
+    OfflinePlayer target = Bukkit.getOfflinePlayer(resolved.get());
+    BigDecimal bal = economyService.balance(target);
+    sender.sendMessage(configuration.locale().message("economy.balance-other", sender)
+      .replace("{player}", target.getName() == null ? args[0] : target.getName())
+      .replace("{amount}", economyService.format(bal)));
     return true;
+  }
+
+  @Override
+  public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+    if (args.length == 1) {
+      String prefix = args[0].toLowerCase(java.util.Locale.ROOT);
+      return Bukkit.getOnlinePlayers().stream()
+          .map(Player::getName)
+          .filter(name -> name.toLowerCase(java.util.Locale.ROOT).startsWith(prefix))
+          .collect(Collectors.toList());
+    }
+    return List.of();
   }
 }

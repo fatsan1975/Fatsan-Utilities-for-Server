@@ -6,6 +6,10 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.server.ServiceRegisterEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
+/**
+ * Plugin açılışında harici Vault provider gecikmeli register olursa devreye girer.
+ * PROVIDER modunda bu listener no-op’tur çünkü provider biziz.
+ */
 public final class EconomyHookListener implements Listener {
   private final JavaPlugin plugin;
   private final EconomyService economyService;
@@ -17,11 +21,18 @@ public final class EconomyHookListener implements Listener {
 
   @EventHandler
   public void onServiceRegister(ServiceRegisterEvent event) {
-    if (!Economy.class.isAssignableFrom(event.getProvider().getService())) {
+    if (economyService.mode() == EconomyService.Mode.PROVIDER) {
       return;
     }
-    if (economyService.trySetupIfNeeded()) {
-      plugin.getLogger().info("Vault ekonomi servisine başarıyla bağlanıldı: " + event.getProvider().getPlugin().getName());
+    try {
+      if (!Economy.class.isAssignableFrom(event.getProvider().getService())) {
+        return;
+      }
+      if (economyService.trySetupIfNeeded()) {
+        plugin.getLogger().info("Vault ekonomi servisine bağlanıldı: " + event.getProvider().getPlugin().getName());
+      }
+    } catch (NoClassDefFoundError ignored) {
+      // Vault yoksa
     }
   }
 }

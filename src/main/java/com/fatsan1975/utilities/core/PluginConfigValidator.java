@@ -19,7 +19,7 @@ public final class PluginConfigValidator {
     validateInt("cooldowns.commands.spawn", 0);
 
     validateInt("teleport.rtp.default.min-coordinate", -30000000);
-    validateInt("teleport.rtp.default.max-coordinate", -30000000);
+    validateInt("teleport.rtp.default.max-coordinate", 1);
     validateInt("teleport.rtp.default.max-attempts", 1);
   }
 

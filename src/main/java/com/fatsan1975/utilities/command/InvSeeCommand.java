@@ -6,13 +6,13 @@ import com.fatsan1975.utilities.core.ModuleManager;
 import com.fatsan1975.utilities.core.RateLimitService;
 import com.fatsan1975.utilities.logging.AuditLogger;
 import com.fatsan1975.utilities.util.CommandGate;
-import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.bukkit.Bukkit;
+import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 public final class InvSeeCommand implements CommandExecutor, TabCompleter {
@@ -39,7 +39,7 @@ public final class InvSeeCommand implements CommandExecutor, TabCompleter {
     }
 
     if (!(sender instanceof Player viewer)) {
-      sender.sendMessage(configuration.message("general.player-only"));
+      sender.sendMessage(configuration.locale().message("general.player-only", sender));
       return true;
     }
 
@@ -48,25 +48,26 @@ public final class InvSeeCommand implements CommandExecutor, TabCompleter {
     }
 
     if (args.length < 1) {
-      viewer.sendMessage(configuration.message("general.invalid-usage").replace("{usage}", "/invsee <oyuncu> [ender]"));
+      viewer.sendMessage(configuration.locale().message("general.invalid-usage", viewer)
+        .replace("{usage}", "/invsee <player> [ender]"));
       return true;
     }
 
     Player target = Bukkit.getPlayerExact(args[0]);
     if (target == null) {
-      viewer.sendMessage(configuration.message("general.player-not-found"));
+      viewer.sendMessage(configuration.locale().message("general.player-not-found", viewer));
       return true;
     }
 
     if (args.length > 1 && args[1].equalsIgnoreCase("ender")) {
-      viewer.openInventory(inventoryService.createEnderView(target));
-      viewer.sendMessage(configuration.message("admin.invsee-open-ender").replace("{player}", target.getName()));
+      viewer.openInventory(inventoryService.createEnderView(viewer, target));
+      viewer.sendMessage(configuration.locale().message("admin.invsee-open-ender", viewer).replace("{player}", target.getName()));
       auditLogger.log("INVSEE", viewer.getName() + " opened ender of " + target.getName());
       return true;
     }
 
-    viewer.openInventory(inventoryService.createInventoryView(target));
-    viewer.sendMessage(configuration.message("admin.invsee-open").replace("{player}", target.getName()));
+    viewer.openInventory(inventoryService.createInventoryView(viewer, target));
+    viewer.sendMessage(configuration.locale().message("admin.invsee-open", viewer).replace("{player}", target.getName()));
     auditLogger.log("INVSEE", viewer.getName() + " opened inventory of " + target.getName());
     return true;
   }
@@ -74,7 +75,11 @@ public final class InvSeeCommand implements CommandExecutor, TabCompleter {
   @Override
   public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
     if (args.length == 1) {
-      return Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList());
+      String prefix = args[0].toLowerCase(java.util.Locale.ROOT);
+      return Bukkit.getOnlinePlayers().stream()
+          .map(Player::getName)
+          .filter(name -> name.toLowerCase(java.util.Locale.ROOT).startsWith(prefix))
+          .collect(Collectors.toList());
     }
     if (args.length == 2) {
       return List.of("ender");

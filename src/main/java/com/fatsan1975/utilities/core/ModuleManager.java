@@ -8,7 +8,8 @@ public final class ModuleManager {
     ECONOMY("modules.economy"),
     TELEPORT("modules.teleport"),
     SOCIAL("modules.social"),
-    ADMIN("modules.admin");
+    ADMIN("modules.admin"),
+    CHAT("modules.chat");
 
     private final String path;
 
@@ -26,6 +27,7 @@ public final class ModuleManager {
         case "teleport" -> TELEPORT;
         case "social" -> SOCIAL;
         case "admin" -> ADMIN;
+        case "chat" -> CHAT;
         default -> null;
       };
     }

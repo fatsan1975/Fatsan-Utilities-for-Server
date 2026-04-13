@@ -1,5 +1,6 @@
 package com.fatsan1975.utilities.config;
 
+import com.fatsan1975.utilities.i18n.LocaleService;
 import java.io.File;
 import java.io.IOException;
 import java.util.logging.Level;
@@ -7,6 +8,12 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
+/**
+ * Tüm YAML config dosyalarını ve lokalizasyon servisini yükler.
+ *
+ * <p>Eskisinden farklı olarak {@code load(..)} artık dosyayı geri yazmaz — böylece kullanıcının
+ * yorum satırları ve formatı korunur.
+ */
 public final class PluginConfiguration {
   private final JavaPlugin plugin;
 
@@ -14,7 +21,7 @@ public final class PluginConfiguration {
   private FileConfiguration economy;
   private FileConfiguration cooldowns;
   private FileConfiguration teleport;
-  private FileConfiguration messages;
+  private LocaleService localeService;
 
   public PluginConfiguration(JavaPlugin plugin) {
     this.plugin = plugin;
@@ -22,15 +29,19 @@ public final class PluginConfiguration {
 
   public void loadAll() {
     plugin.saveDefaultConfig();
+    plugin.reloadConfig();
     this.main = plugin.getConfig();
     this.economy = load("economy.yml");
     this.cooldowns = load("cooldowns.yml");
     this.teleport = load("teleport.yml");
-    this.messages = load("messages_tr.yml");
+
+    if (this.localeService == null) {
+      this.localeService = new LocaleService(plugin, this);
+    }
+    this.localeService.reload();
   }
 
   public void reloadAll() {
-    plugin.reloadConfig();
     loadAll();
   }
 
@@ -47,13 +58,7 @@ public final class PluginConfiguration {
     if (!file.exists()) {
       plugin.saveResource(fileName, false);
     }
-    FileConfiguration config = YamlConfiguration.loadConfiguration(file);
-    try {
-      config.save(file);
-    } catch (IOException exception) {
-      plugin.getLogger().warning(fileName + " dosyası kaydedilemedi: " + exception.getMessage());
-    }
-    return config;
+    return YamlConfiguration.loadConfiguration(file);
   }
 
   public FileConfiguration main() {
@@ -72,12 +77,12 @@ public final class PluginConfiguration {
     return teleport;
   }
 
-  public FileConfiguration messages() {
-    return messages;
+  public LocaleService locale() {
+    return localeService;
   }
 
+  /** Sunucu/konsol varsayılan dilinde mesaj döndürür. Legacy alias — yeni kod {@link #locale()} kullanmalı. */
   public String message(String path) {
-    String raw = messages.getString(path, "&cMesaj bulunamadı: " + path);
-    return raw.replace('&', '§');
+    return localeService.message(path);
   }
 }
