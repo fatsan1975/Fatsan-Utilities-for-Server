@@ -1,3 +1,11 @@
+command-costs:
+  # 0 = ucretsiz. Varsayilan tum temel teleport komutlari 100 birimdir.
+  rtp: 100.0
+  tpa: 100.0
+  spawn: 100.0
+  home: 100.0
+  sethome: 100.0
+
 tpa:
   request-expire-millis: 30000
   overwrite-request: true
@@ -8,13 +16,27 @@ spawn:
   delay-ticks: 0
   cancel-on-move: false
 
+home:
+  # Varsayilan maksimum home sayisi. Artirmak icin permission kullan:
+  # fatsanutilities.homes.max.<sayi>  (orn: fatsanutilities.homes.max.10)
+  # fatsanutilities.homes.unlimited - sinirsiz
+  default-max: 3
+  # /home kullanildiktan sonra tekrar kullanabilmek icin bekleme (ms)
+  teleport-cooldown-millis: 5000
+  # /sethome icin cooldown (ms). 0 ise yok.
+  sethome-cooldown-millis: 0
+  # Isinlanma gecikmesi (tick). 20 tick = 1 saniye
+  delay-ticks: 0
+  # Gecikme suresinde oyuncu hareket ederse iptal et
+  cancel-on-move: true
+
 rtp:
   delay-ticks: 0
   cancel-on-move: false
-  # /rtp yazınca varsayılan olarak kullanılacak dünya (yoksa oyuncunun bulunduğu dünya kullanılır)
+  # /rtp yazinca varsayilan olarak kullanilacak dunya
   default-world: world
 
-  # RTP cooldown (ms). Eğer burası yoksa cooldowns.yml -> commands.rtp değeri kullanılır.
+  # RTP cooldown (ms). Eger burasi yoksa cooldowns.yml -> commands.rtp degeri kullanilir.
   cooldown-millis: 5000
 
   default:
@@ -38,7 +60,6 @@ rtp:
       - CAMPFIRE
       - SOUL_CAMPFIRE
 
-  # Dünya bazlı RTP ayarları (her dünya için ayrı koordinat/attempt/safe liste)
   worlds:
     world:
       enabled: true

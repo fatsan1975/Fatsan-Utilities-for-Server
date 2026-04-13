@@ -1,5 +1,12 @@
+# =============================================================================
+# Fatsan Utilities — Genel Ayarlar / General Settings
+# =============================================================================
+
 plugin:
-  language: tr_TR
+  # Sunucu varsayılan dili: tr veya en
+  language: tr
+  # Oyuncunun client locale'ine göre dil seç (true ise tr/en'e otomatik düşer)
+  follow-client-language: false
   debug: false
 
 modules:
@@ -7,12 +14,23 @@ modules:
   teleport: true
   social: true
   admin: true
+  chat: true
+
+# =============================================================================
+# Chat Format Ayarlari / Chat Format Settings
+# =============================================================================
+# Vault Chat (FatsanPerms, LuckPerms vs.) uzerinden prefix/suffix alir.
+# Placeholders: {prefix}, {suffix}, {player}, {message}
+# Renk kodlari: & ile (ornek: &a, &6, &#FF5555)
+chat:
+  format: "{prefix}{player}{suffix} &8\u00BB &f{message}"
 
 rate-limit:
   commands:
     balance: 250
     balancetop: 500
     pay: 250
+    eco: 250
     tpa: 300
     tpaccept: 300
     tpdeny: 300
@@ -25,3 +43,8 @@ rate-limit:
     fuhelp: 500
     fudebug: 1000
     fumodule: 500
+    home: 300
+    sethome: 500
+    delhome: 500
+    homes: 500
+    setspawn: 500

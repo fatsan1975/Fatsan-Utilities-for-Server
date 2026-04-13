@@ -5,9 +5,9 @@ import com.fatsan1975.utilities.core.ModuleManager;
 import com.fatsan1975.utilities.core.RateLimitService;
 import com.fatsan1975.utilities.economy.BalanceTopCacheService;
 import com.fatsan1975.utilities.economy.EconomyService;
+import com.fatsan1975.utilities.economy.model.TopEntry;
 import com.fatsan1975.utilities.util.CommandGate;
 import java.util.List;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -39,7 +39,7 @@ public final class BalanceTopCommand implements CommandExecutor {
       return true;
     }
     if (!economyService.trySetupIfNeeded()) {
-      sender.sendMessage(configuration.message("economy.not-ready"));
+      sender.sendMessage(configuration.locale().message("economy.not-ready", sender));
       return true;
     }
 
@@ -54,23 +54,24 @@ public final class BalanceTopCommand implements CommandExecutor {
 
     int pageSize = Math.max(1, configuration.economy().getInt("balancetop.page-size", 10));
     int cacheLimit = Math.max(pageSize * page, configuration.economy().getInt("balancetop.max-entries", 50));
-    List<OfflinePlayer> top = topCache.getTop(cacheLimit);
+    List<TopEntry> top = topCache.getTop(cacheLimit);
 
     int start = (page - 1) * pageSize;
     if (start >= top.size()) {
-      sender.sendMessage(configuration.message("economy.balancetop-empty-page"));
+      sender.sendMessage(configuration.locale().message("economy.balancetop-empty-page", sender));
       return true;
     }
 
     int end = Math.min(start + pageSize, top.size());
-    sender.sendMessage(configuration.message("economy.balancetop-header").replace("{page}", String.valueOf(page)));
+    sender.sendMessage(configuration.locale().message("economy.balancetop-header", sender)
+      .replace("{page}", String.valueOf(page)));
 
     for (int i = start; i < end; i++) {
-      OfflinePlayer player = top.get(i);
-      String line = configuration.message("economy.balancetop-line")
+      TopEntry entry = top.get(i);
+      String line = configuration.locale().message("economy.balancetop-line", sender)
         .replace("{rank}", String.valueOf(i + 1))
-        .replace("{player}", player.getName() == null ? "Bilinmiyor" : player.getName())
-        .replace("{amount}", economyService.format(economyService.balance(player)));
+        .replace("{player}", entry.name() == null ? "?" : entry.name())
+        .replace("{amount}", economyService.format(entry.balance()));
       sender.sendMessage(line);
     }
     return true;

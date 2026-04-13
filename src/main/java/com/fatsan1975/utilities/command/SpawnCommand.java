@@ -3,20 +3,25 @@ package com.fatsan1975.utilities.command;
 import com.fatsan1975.utilities.config.PluginConfiguration;
 import com.fatsan1975.utilities.core.ModuleManager;
 import com.fatsan1975.utilities.core.RateLimitService;
+import com.fatsan1975.utilities.core.scheduler.FoliaScheduler;
+import com.fatsan1975.utilities.economy.EconomyService;
+import com.fatsan1975.utilities.teleport.SpawnService;
 import com.fatsan1975.utilities.teleport.TeleportService;
+import com.fatsan1975.utilities.util.CommandCost;
 import com.fatsan1975.utilities.util.CommandGate;
 import com.fatsan1975.utilities.util.CooldownService;
+import com.fatsan1975.utilities.util.PermissionAccess;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.Command;
-import org.bukkit.plugin.java.JavaPlugin;
-import java.util.List;
-import java.util.stream.Collectors;
 import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.java.JavaPlugin;
 
 public final class SpawnCommand implements CommandExecutor, TabCompleter {
   public enum Mode { SPAWN, RTP }
@@ -28,9 +33,19 @@ public final class SpawnCommand implements CommandExecutor, TabCompleter {
   private final JavaPlugin plugin;
   private final ModuleManager modules;
   private final RateLimitService rateLimit;
+  private final SpawnService spawnService;
+  private final EconomyService economyService;
 
-  public SpawnCommand(JavaPlugin plugin, PluginConfiguration configuration, TeleportService teleportService, CooldownService cooldownService, Mode mode,
-                      ModuleManager modules, RateLimitService rateLimit) {
+  public SpawnCommand(
+      JavaPlugin plugin,
+      PluginConfiguration configuration,
+      TeleportService teleportService,
+      CooldownService cooldownService,
+      Mode mode,
+      ModuleManager modules,
+      RateLimitService rateLimit,
+      SpawnService spawnService,
+      EconomyService economyService) {
     this.plugin = plugin;
     this.configuration = configuration;
     this.teleportService = teleportService;
@@ -38,6 +53,8 @@ public final class SpawnCommand implements CommandExecutor, TabCompleter {
     this.mode = mode;
     this.modules = modules;
     this.rateLimit = rateLimit;
+    this.spawnService = spawnService;
+    this.economyService = economyService;
   }
 
   @Override
@@ -47,7 +64,7 @@ public final class SpawnCommand implements CommandExecutor, TabCompleter {
       return true;
     }
     if (!(sender instanceof Player player)) {
-      sender.sendMessage(configuration.message("general.player-only"));
+      sender.sendMessage(configuration.locale().message("general.player-only", sender));
       return true;
     }
 
@@ -55,17 +72,32 @@ public final class SpawnCommand implements CommandExecutor, TabCompleter {
     if (!CommandGate.checkRateLimit(player, configuration, rateLimit, key, "rate-limit.commands." + key)) {
       return true;
     }
+
     long remaining = cooldownService.remainingMillis(key, player.getUniqueId());
     if (remaining > 0) {
-      sender.sendMessage(configuration.message("general.cooldown").replace("{seconds}", String.valueOf(Math.ceil(remaining / 1000.0))));
+      sender.sendMessage(configuration.locale().message("general.cooldown", sender)
+        .replace("{seconds}", String.valueOf(Math.ceil(remaining / 1000.0))));
       return true;
     }
 
     if (mode == Mode.SPAWN) {
+      if (!CommandCost.charge(player, configuration, economyService, "spawn")) {
+        return true;
+      }
+
       long delayTicks = configuration.teleport().getLong("spawn.delay-ticks", 0L);
       boolean cancelOnMove = configuration.teleport().getBoolean("spawn.cancel-on-move", false);
-      scheduleTeleport(player, player.getWorld().getSpawnLocation(), delayTicks, cancelOnMove,
-        configuration.message("teleport.spawn-success"), configuration.message("teleport.teleport-cancelled-move"));
+      Location spawnTarget = spawnService != null ? spawnService.getSpawn() : null;
+      if (spawnTarget == null) {
+        spawnTarget = player.getWorld().getSpawnLocation();
+      }
+      scheduleTeleport(
+        player,
+        spawnTarget,
+        delayTicks,
+        cancelOnMove,
+        configuration.locale().message("teleport.spawn-success", sender),
+        configuration.locale().message("teleport.teleport-cancelled-move", sender));
       cooldownService.set("spawn", player.getUniqueId(), configuration.cooldowns().getLong("commands.spawn", 3000L));
       return true;
     }
@@ -76,41 +108,61 @@ public final class SpawnCommand implements CommandExecutor, TabCompleter {
     }
 
     String worldPermission = "fatsanutilities.rtp.world." + targetWorld.getName().toLowerCase();
-    if (!player.hasPermission(worldPermission)) {
-      player.sendMessage(configuration.message("teleport.rtp-no-world-permission").replace("{world}", targetWorld.getName()));
+    if (!PermissionAccess.has(player, worldPermission)) {
+      player.sendMessage(configuration.locale().message("teleport.rtp-no-world-permission", sender)
+        .replace("{world}", targetWorld.getName()));
       return true;
     }
 
     TeleportService.RtpOptions options = teleportService.optionsForWorld(targetWorld);
     if (!options.enabled()) {
-      player.sendMessage(configuration.message("teleport.rtp-world-disabled").replace("{world}", targetWorld.getName()));
+      player.sendMessage(configuration.locale().message("teleport.rtp-world-disabled", sender)
+        .replace("{world}", targetWorld.getName()));
       return true;
     }
 
-    TeleportService.RtpResult result = teleportService.findRandomSafeLocation(targetWorld, options);
-    if (!result.success()) {
-      if (result.reason() == TeleportService.RtpFailReason.OUTSIDE_WORLD_BORDER) {
-        player.sendMessage(configuration.message("teleport.rtp-fail-border"));
-      } else {
-        player.sendMessage(configuration.message("teleport.rtp-fail"));
-      }
-      return true;
-    }
+    Player finalPlayer = player;
+    FoliaScheduler.runAsync(plugin, () -> {
+      TeleportService.RtpResult result = teleportService.findRandomSafeLocation(targetWorld, options);
+      FoliaScheduler.runAtEntity(plugin, finalPlayer, () -> {
+        if (!result.success()) {
+          if (result.reason() == TeleportService.RtpFailReason.OUTSIDE_WORLD_BORDER) {
+            finalPlayer.sendMessage(configuration.locale().message("teleport.rtp-fail-border", finalPlayer));
+          } else {
+            finalPlayer.sendMessage(configuration.locale().message("teleport.rtp-fail", finalPlayer));
+          }
+          return;
+        }
 
-    long delayTicks = configuration.teleport().getLong("rtp.delay-ticks", 0L);
-    boolean cancelOnMove = configuration.teleport().getBoolean("rtp.cancel-on-move", false);
-    scheduleTeleport(player, result.location(), delayTicks, cancelOnMove,
-      configuration.message("teleport.rtp-success").replace("{world}", targetWorld.getName()),
-      configuration.message("teleport.teleport-cancelled-move"));
+        if (!CommandCost.charge(finalPlayer, configuration, economyService, "rtp")) {
+          return;
+        }
 
-    long cooldownMillis = configuration.teleport().getLong("rtp.cooldown-millis",
-      configuration.cooldowns().getLong("commands.rtp", 5000L));
-    cooldownService.set("rtp", player.getUniqueId(), cooldownMillis);
+        long delayTicks = configuration.teleport().getLong("rtp.delay-ticks", 0L);
+        boolean cancelOnMove = configuration.teleport().getBoolean("rtp.cancel-on-move", false);
+        scheduleTeleport(
+          finalPlayer,
+          result.location(),
+          delayTicks,
+          cancelOnMove,
+          configuration.locale().message("teleport.rtp-success", finalPlayer).replace("{world}", targetWorld.getName()),
+          configuration.locale().message("teleport.teleport-cancelled-move", finalPlayer));
+        long cooldownMillis = configuration.teleport().getLong(
+          "rtp.cooldown-millis",
+          configuration.cooldowns().getLong("commands.rtp", 5000L));
+        cooldownService.set("rtp", finalPlayer.getUniqueId(), cooldownMillis);
+      });
+    });
     return true;
   }
 
-  private void scheduleTeleport(Player player, Location target, long delayTicks, boolean cancelOnMove,
-                                String successMessage, String cancelMessage) {
+  private void scheduleTeleport(
+      Player player,
+      Location target,
+      long delayTicks,
+      boolean cancelOnMove,
+      String successMessage,
+      String cancelMessage) {
     if (delayTicks <= 0) {
       player.teleportAsync(target);
       player.sendMessage(successMessage);
@@ -118,9 +170,10 @@ public final class SpawnCommand implements CommandExecutor, TabCompleter {
     }
 
     Location start = player.getLocation().clone();
-    player.sendMessage(configuration.message("teleport.teleport-delay").replace("{seconds}", String.valueOf(delayTicks / 20.0)));
+    player.sendMessage(configuration.locale().message("teleport.teleport-delay", player)
+      .replace("{seconds}", String.valueOf(delayTicks / 20.0)));
 
-    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+    FoliaScheduler.runAtEntityDelayed(plugin, player, () -> {
       if (!player.isOnline()) {
         return;
       }
@@ -143,7 +196,7 @@ public final class SpawnCommand implements CommandExecutor, TabCompleter {
     if (args.length > 0) {
       World selected = Bukkit.getWorld(args[0]);
       if (selected == null) {
-        player.sendMessage(configuration.message("teleport.rtp-world-not-found"));
+        player.sendMessage(configuration.locale().message("teleport.rtp-world-not-found", player));
         return null;
       }
       return selected;
@@ -160,7 +213,11 @@ public final class SpawnCommand implements CommandExecutor, TabCompleter {
   @Override
   public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
     if (mode == Mode.RTP && args.length == 1) {
-      return Bukkit.getWorlds().stream().map(World::getName).collect(Collectors.toList());
+      String prefix = args[0].toLowerCase(java.util.Locale.ROOT);
+      return Bukkit.getWorlds().stream()
+        .map(World::getName)
+        .filter(name -> name.toLowerCase(java.util.Locale.ROOT).startsWith(prefix))
+        .collect(Collectors.toList());
     }
     return List.of();
   }

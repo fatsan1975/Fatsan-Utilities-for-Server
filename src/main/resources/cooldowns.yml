@@ -3,3 +3,9 @@ commands:
   tpa: 3000
   spawn: 3000
   rtp: 5000
+  eco: 0
+  home: 5000
+  sethome: 0
+  delhome: 0
+  homes: 0
+  setspawn: 0
