@@ -1,134 +1,175 @@
 # Fatsan Utilities for Server
 
-[Türkçe](#türkçe) · [English](#english)
+Fatsan Utilities for Server is a Folia-first, Paper-compatible utility plugin for Minecraft 1.21.11 servers. It was built as a practical core utility layer for survival servers that want economy, teleport, chat, and admin quality-of-life features without depending on large all-in-one plugins that may not behave well on Folia.
 
----
+The plugin focuses on the features servers actually use every day: balance commands, player payments, TPA, spawn, RTP, homes, warps, item and inventory chat showcase, inventory viewing, a configurable in-game help menu, and a built-in economy that can either work on its own or integrate into an existing Vault ecosystem.
 
-## Türkçe
+Instead of replacing your whole server stack, it provides a compact and modular base designed around Folia-safe scheduling, clean YAML configuration, persistent storage where needed, and realistic server-owner control over how each feature behaves.
 
-**Folia öncelikli, Paper 1.21.x uyumlu, çok dilli temel sunucu utility plugini.**
+## Features
 
-Essentials’ın Folia’da çalışmaması nedeniyle hayata geçti. Hafif, hızlı, korunaklı, kolayca yapılandırılabilir; ekonomi, teleport, sosyal ve admin modüllerini tek paket halinde sunar.
+- Folia-first design with Paper 1.21.11 compatibility
+- Built around Folia-safe scheduler usage instead of legacy scheduler assumptions
+- Built-in SQLite-backed economy provider with BigDecimal precision
+- Vault and VaultUnlocked bridge support
+- Economy modes:
+  - `auto` to consume an existing provider if present, otherwise register the built-in one
+  - `provider` to always use the built-in SQLite economy
+  - `consumer` to only use an external provider
+- Atomic player-to-player money transfers
+- Persistent daily payment limit support
+- `/balance`, `/balancetop`, `/pay`, and `/eco` economy features
+- `/tpa`, `/tpaccept`, `/tpdeny`, `/spawn`, `/rtp`, `/home`, `/sethome`, `/delhome`, `/homes`, `/warp`, and `/setwarp`
+- Persistent warp storage in `warps.yml`
+- Persistent home storage in `homes.yml`
+- Persistent configurable spawn storage in `spawn.yml`
+- Config-driven `/help` GUI that overrides the default help command
+- In-game help menu that closes normally with `ESC` or `E`
+- Chat showcase commands for held items and inventory context
+- Admin inventory viewer with optional ender chest access
+- Runtime module toggles for economy, teleport, social, admin, and chat features
+- Turkish and English language support
+- Per-player language selection through permissions or client locale follow mode
+- Async audit logging to `logs/audit.log`
+- Thread-safe internal state for cooldowns, rate limits, TPA requests, and pay limits
+- Player quit cleanup to avoid stale requests and temporary-state leaks
+- STARTUP load order so economy registration happens early for dependent plugins
 
-### Öne Çıkan Özellikler (v0.2.0)
-- ✅ **Tam Folia uyumlu scheduler** — `RegionScheduler`, `EntityScheduler`, `AsyncScheduler` adapter’ı.
-- ✅ **Kendi ekonomi sağlayıcısı** — SQLite tabanlı, BigDecimal precision, atomik transferler. Hem **Vault** hem **VaultUnlocked** köprüsü.
-- ✅ **Auto / Provider / Consumer** modu: harici provider (CMI, EssentialsX) varsa onu tüketir, yoksa kendi ekonomimizi register eder.
-- ✅ **Kalıcı günlük transfer limiti** — restart’ta sıfırlanmaz, exploit kapatılır.
-- ✅ **Türkçe + İngilizce** dil desteği, oyuncu bazlı dil seçimi (`fatsanutilities.lang.*` permission veya client locale).
-- ✅ **Asenkron audit log** — `logs/audit.log` dosyasına yazar, ana thread’i bloklamaz.
-- ✅ **Thread-safe state** — tüm cooldown / rate-limit / TPA / pay-limit map’leri `ConcurrentHashMap`.
-- ✅ **Player quit cleanup** — bellek sızıntısı ve hayalet TPA istekleri yok.
-- ✅ **STARTUP load order** — provider olarak diğer plugin’lerden önce yüklenir.
-- ✅ **FoliaPerms / Vault Permission adapter** — offline permission lookup için reflective.
+## Safe Teleport Cost Handling
 
-### Komutlar
+Delayed teleports are handled carefully so players do not lose money just because a teleport was cancelled before completion.
 
-| Komut | Permission | Açıklama |
-|---|---|---|
-| `/balance [oyuncu]` | `fatsanutilities.balance` | Bakiye gösterir |
-| `/balancetop [sayfa]` | `fatsanutilities.balancetop` | Zenginlik sıralaması (SQL tabanlı, hızlı) |
-| `/pay <oyuncu> <miktar>` | `fatsanutilities.pay` | Atomik para transferi |
-| `/eco <give\|take\|set\|reset> <oyuncu> [miktar]` | `fatsanutilities.admin.eco` | Admin ekonomi yönetimi |
-| `/tpa <oyuncu>` | `fatsanutilities.tpa` | Işınlanma isteği |
-| `/tpaccept` / `/tpdeny` | `fatsanutilities.tpa.accept` / `.deny` | Kabul/Red |
-| `/rtp [dünya]` | `fatsanutilities.rtp` + `fatsanutilities.rtp.world.<dünya>` | Asenkron güvenli RTP |
-| `/spawn` | `fatsanutilities.spawn` | Spawn’a ışınlanma |
-| `/itemchat`, `/invchat` | `fatsanutilities.itemchat` / `.invchat` | Sohbette eşya/envanter göster |
-| `/invsee <oyuncu> [ender]` | `fatsanutilities.admin.invsee` | Admin envanter görüntüleyici |
-| `/fuhelp` | `fatsanutilities.help` | Yetkine göre filtrelenmiş yardım |
-| `/fudebug` | `fatsanutilities.admin.debug` | Runtime durumu |
-| `/fumodule <modül> <on\|off\|status>` | `fatsanutilities.admin.module` | Modül aç/kapat |
-| `/futilitiesreload` | `fatsanutilities.admin.reload` | Config yenile |
+The plugin first checks whether the player can afford the teleport, waits through the configured delay, cancels if movement rules are violated, and only charges right before the teleport attempt is made. If a charged teleport attempt fails at that point, the cost is refunded automatically.
 
-### Ekonomi Modu Seçimi
-`economy.yml` içindeki `mode` ayarı:
-- `auto` (önerilen) — Vault/VaultUnlocked’a kayıtlı bir provider varsa onu tüket; yoksa kendi SQLite ekonomimizi register et.
-- `provider` — Her zaman kendi ekonomimizi çalıştır ve register et.
-- `consumer` — Sadece harici provider’ı tüket; yoksa hazır olmaz.
+This applies to delayed teleport flows such as homes and warps, and avoids the common problem where movement cancellation still consumes money.
 
-Provider modunda veriler `plugins/FatsanUtilities/data/economy.sqlite` dosyasında saklanır (WAL mode, atomik transactions).
+## Commands
 
-### Dil Yönetimi
-`config.yml -> plugin.language: tr|en` sunucu varsayılanını belirler. Oyuncuya özel dil için iki yol var:
-1. `fatsanutilities.lang.en` permission ata → İngilizce gösterilir.
-2. `plugin.follow-client-language: true` aç → oyuncu client locale’ine (`tr` veya `en`) göre otomatik seçilir.
+- `/balance [player]`
+- `/balancetop [page]`
+- `/pay <player> <amount>`
+- `/eco <give|take|set|reset> <player> [amount]`
+- `/tpa <player>`
+- `/tpaccept`
+- `/tpdeny`
+- `/spawn`
+- `/setspawn`
+- `/rtp [world]`
+- `/home [name]`
+- `/sethome [name]`
+- `/delhome [name]`
+- `/homes`
+- `/warp <name>`
+- `/setwarp <name>`
+- `/itemchat`
+- `/invchat`
+- `/invsee <player> [ender]`
+- `/help`
+- `/fudebug`
+- `/fumodule <module> <on|off|status>`
+- `/futilitiesreload`
 
-Eksik anahtar olduğunda `tr` fallback’ına düşer; her iki dosya da CI’da parity testiyle doğrulanır.
+## Permissions
 
-### Gereksinimler
+- `fatsanutilities.balance`
+- `fatsanutilities.balancetop`
+- `fatsanutilities.pay`
+- `fatsanutilities.admin.eco`
+- `fatsanutilities.tpa`
+- `fatsanutilities.tpa.accept`
+- `fatsanutilities.tpa.deny`
+- `fatsanutilities.spawn`
+- `fatsanutilities.admin.setspawn`
+- `fatsanutilities.rtp`
+- `fatsanutilities.rtp.world.<world>`
+- `fatsanutilities.home`
+- `fatsanutilities.sethome`
+- `fatsanutilities.delhome`
+- `fatsanutilities.homes`
+- `fatsanutilities.homes.max.<number>`
+- `fatsanutilities.homes.unlimited`
+- `fatsanutilities.warp`
+- `fatsanutilities.admin.setwarp`
+- `fatsanutilities.itemchat`
+- `fatsanutilities.invchat`
+- `fatsanutilities.admin.invsee`
+- `fatsanutilities.help`
+- `fatsanutilities.admin.debug`
+- `fatsanutilities.admin.module`
+- `fatsanutilities.admin.reload`
+- `fatsanutilities.lang.tr`
+- `fatsanutilities.lang.en`
+
+## Configuration
+
+The plugin is split into focused YAML files so server owners can manage behavior without editing one oversized config.
+
+You can control things like:
+
+- server default language
+- whether player language should follow client locale
+- which major modules are enabled
+- chat format
+- per-command rate limits
+- economy mode and currency settings
+- starting balance
+- payment limits and balance-top cache settings
+- teleport command costs
+- TPA expiry and behavior
+- RTP world settings, denied biomes, denied ground materials, and attempt counts
+- home limits, cooldowns, delays, and movement cancellation
+- warp delay, movement cancellation, and cooldown
+- the `/help` menu title, size, filler items, slots, icons, and text content
+
+## Config Files
+
+- `config.yml` for general settings, modules, chat format, rate limits, and help menu layout
+- `economy.yml` for economy mode, currency settings, pay limits, and balance-top settings
+- `teleport.yml` for teleport costs, TPA, RTP, home, and warp behavior
+- `cooldowns.yml` for command cooldown timings
+- `messages_tr.yml` for Turkish messages
+- `messages_en.yml` for English messages
+
+## Runtime Data Files
+
+- `data/economy.sqlite` for built-in economy storage when running in provider mode
+- `spawn.yml` for the configured spawn location
+- `homes.yml` for player homes
+- `warps.yml` for named warps
+- `logs/audit.log` for audit records
+
+## Requirements
+
 - Java 21
-- Paper veya Folia **1.21.x**
-- (Opsiyonel) Vault, VaultUnlocked, FoliaPerms, LuckPerms
+- Folia or Paper 1.21.11
 
-### Kurulum
-1. JAR’ı `plugins/` klasörüne at, sunucuyu başlat.
-2. `plugins/FatsanUtilities/` altındaki YAML’ları düzenle.
-3. `/futilitiesreload` ile yeniden yükle.
+## Optional Integrations
 
-### Geliştirme
+- Vault
+- VaultUnlocked
+- FoliaPerms
+- LuckPerms
+
+## Notes
+
+This plugin is intended to be a modular survival utility base, not a full replacement for every admin or gameplay plugin on your server.
+
+The built-in economy works well on its own, but the plugin can also run in consumer mode if your server already uses another Vault-compatible economy plugin.
+
+The `/help` command is intentionally handled by the plugin and opens a configurable in-game GUI instead of the default help output.
+
+RTP, homes, spawn, warps, and TPA behavior are configurable, so the default setup is meant to be a practical starting point rather than a fixed gameplay design.
+
+The plugin ships with both Turkish and English localisation files, and missing language keys fall back safely.
+
+## Development
+
 ```bash
 ./gradlew build
 ./gradlew test
 ./gradlew runServer
 ```
 
----
+## License
 
-## English
-
-**Folia-first, Paper 1.21.x compatible, multilingual core server utility plugin.**
-
-Born because Essentials does not run on Folia. Lightweight, fast, hardened, easy to configure; bundles economy, teleport, social and admin modules in a single package.
-
-### Highlights (v0.2.0)
-- ✅ **Full Folia-aware scheduler** — adapter over `RegionScheduler`, `EntityScheduler`, `AsyncScheduler`.
-- ✅ **Built-in economy provider** — SQLite backed, BigDecimal precision, atomic transfers. Bridges both **Vault** and **VaultUnlocked**.
-- ✅ **Auto / Provider / Consumer** mode: consumes an existing provider (CMI, EssentialsX) if present; otherwise registers our own.
-- ✅ **Persistent daily transfer limits** — survive restarts.
-- ✅ **Turkish + English** localisation with per-player language selection.
-- ✅ **Async audit logger** to `logs/audit.log`.
-- ✅ **Thread-safe state** everywhere — `ConcurrentHashMap`s for cooldown / rate-limit / TPA / pay-limit.
-- ✅ **Player-quit cleanup** to prevent leaks.
-- ✅ **STARTUP load order** so we register before consumers initialize.
-- ✅ **Reflective FoliaPerms / Vault Permission adapter** for offline permission lookups.
-
-### Economy Modes (`economy.yml -> mode`)
-- `auto` (recommended) — consume an existing provider; otherwise register our own.
-- `provider` — always register our SQLite economy.
-- `consumer` — only consume an external provider.
-
-Provider data is stored at `plugins/FatsanUtilities/data/economy.sqlite` (WAL, atomic transactions).
-
-### Localisation
-Set the server-wide default with `config.yml -> plugin.language: tr|en`. Per-player override:
-1. Grant `fatsanutilities.lang.en` (or `.tr`).
-2. Or enable `plugin.follow-client-language: true` to follow the client locale.
-
-Missing keys fall back to `tr`. A CI parity test ensures both files share the same key set.
-
-### Requirements
-- Java 21
-- Paper or Folia **1.21.x**
-- (Optional) Vault, VaultUnlocked, FoliaPerms, LuckPerms
-
-### Build
-```bash
-./gradlew build
-./gradlew test
-./gradlew runServer
-```
-
----
-
-## Migration Notes (0.1.x → 0.2.x)
-
-- `EconomyService` artık `BigDecimal` döner; `pay()` `TransferOutcome` kullanır.
-- `EconomyTransferEvent.amount()` `BigDecimal` döndürür (eski `double` için `amountAsDouble()`).
-- `messages_tr.yml` formatı korundu, `messages_en.yml` eklendi.
-- `economy.yml` içine `mode`, `starting-balance`, `currency.*` alanları eklendi (varsayılanlar mevcut sunucularla uyumludur).
-- `BalanceTopCacheService` artık `OfflinePlayer` yerine `TopEntry` döndürür.
-- Folia’da çalışmak için `bukkit.getScheduler()` çağrıları kaldırıldı.
-
-## Lisans
-Bkz. [LICENSE](LICENSE).
+See [LICENSE](LICENSE).
